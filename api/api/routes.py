@@ -122,12 +122,10 @@ def get_saved_indexes_endpoint():
 
 @auth_bp.route('/updateProfile', methods=['POST'])
 def update_profile():
-    # Assuming you have a method to authenticate the user and get their ID.
     user_id = request.form.get("userId")
     first_name = request.form.get("firstName")
     last_name = request.form.get("lastName")
 
-    # Handle the profile picture upload
     profile_picture = None
     if 'profilePicture' in request.files:
         file = request.files['profilePicture']
@@ -172,7 +170,7 @@ def initialize_client_portfolio():
             return {'error': 'Some buy entries are missing required fields'}, 400
 
     username = data.get('username')
-    holdings = data.get('holdings')  # holdings should be a list of dictionaries
+    holdings = data.get('buys')
 
     if not username or not holdings:
         return {'error': 'Required fields missing'}, 400
@@ -188,7 +186,7 @@ def add_stock_buy_route():
     shares = data.get('shares')
     date = data.get('date')
 
-    if not username or not ticker or shares is None or not date:  # Shares can be 0 but not None
+    if not username or not ticker or shares is None or not date:  
         return {'error': 'Required fields missing'}, 400
 
     return add_stock_buy(username, ticker, shares, date)

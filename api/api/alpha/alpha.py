@@ -8,11 +8,8 @@ from dotenv import load_dotenv
 import time
 import traceback
 
-# Load API key from .env file
 load_dotenv()
 finnhub_api_key = os.getenv('FINNHUB_API_KEY')
-
-# Set up client
 finnhub_client = finnhub.Client(api_key=finnhub_api_key)
 
 
@@ -24,7 +21,8 @@ def calculate_decisions(tickers, days_back=2*365):
 
     for ticker in tickers:
         try:
-            res = finnhub_client.stock_candles(ticker, 'D', int(start_date.timestamp()), int(end_date.timestamp()))
+            res = finnhub_client.stock_candles(ticker, 'D', int(
+                start_date.timestamp()), int(end_date.timestamp()))
             timestamps = pd.to_datetime(res['t'], unit='s')
             df = pd.DataFrame({'Close': res['c']}, index=timestamps)
             df = df.resample('D').ffill()
@@ -41,17 +39,23 @@ def calculate_decisions(tickers, days_back=2*365):
 
     buy_decisions = should_buy_stock(averages)
 
-    sorted_decisions = sorted(buy_decisions.items(), key=lambda x: (x[1][0] == 'Do not buy', abs(x[1][1])))
+    sorted_decisions = sorted(buy_decisions.items(), key=lambda x: (
+        x[1][0] == 'Do not buy', abs(x[1][1])))
 
     results = []
 
-    for ticker, (decision, change_needed, current_price, average) in sorted_decisions:
+    for ticker, (decision, change_needed, current_price, average, percentage_change) in sorted_decisions:
+        data = yf.Ticker(ticker)
+        company_name = data.info['shortName'] 
+
         result = {
             'ticker': ticker,
+            'company_name': company_name, 
             'decision': decision,
             'change_needed': change_needed,
             'current_price': current_price,
             'average': average,
+            'percentage_change': percentage_change
         }
         results.append(result)
 
@@ -83,10 +87,13 @@ def should_buy_stock(ticker_averages):
         current_price = history['Close'][0]
 
         change_needed = average - current_price
+        percentage_change = round((change_needed / current_price) * 100)
 
         if current_price < average:
-            decisions[ticker] = ('Buy', change_needed, current_price, average)
+            decisions[ticker] = ('Buy', change_needed,
+                                 current_price, average, percentage_change)
         else:
-            decisions[ticker] = ('Do not buy', change_needed, current_price, average)
+            decisions[ticker] = ('Do not buy', change_needed,
+                                 current_price, average, percentage_change)
 
     return decisions

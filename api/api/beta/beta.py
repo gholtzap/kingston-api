@@ -12,10 +12,18 @@ import yfinance
 
 def get_data(tickers, start_date, end_date):
     data = {}
+    company_names = {} 
+
     for ticker in tickers:
-        ticker_data = yfinance.download(ticker, start=start_date, end=end_date)
+        yf_ticker = yfinance.Ticker(ticker)
+        ticker_data = yf_ticker.history(start=start_date, end=end_date)
         data[ticker] = ticker_data["Adj Close"]
-    return pd.DataFrame(data)
+
+        company_info = yf_ticker.info
+        company_names[ticker] = company_info.get('longName', ticker) 
+
+    return pd.DataFrame(data), company_names
+
 
 
 def create_index(df):
@@ -24,15 +32,16 @@ def create_index(df):
 
 def generate_index_and_image(data):
     
-    index_color = "#40E0D0"  # turquoise
+    
+    index_color = "#40E0D0" 
     comparison_ticker_colors = {
-        "^GSPC": "#FFFFBA",  # pastel yellow
-        "^DJI": "#FFDFBA",  # pastel orange
+        "^GSPC": "#FFFFBA", 
+        "^DJI": "#FFDFBA",
     }
     index_name = data['index_name']
     tickers = data['tickers']
 
-    start_date = "2020-01-01"  # these can also be input by user if you like
+    start_date = "2020-01-01" 
     end_date = "2023-12-31"
     comparison_tickers=["^GSPC", "^DJI"]
     index_names = {
@@ -40,13 +49,11 @@ def generate_index_and_image(data):
         "^DJI":"DJI"
     }
 
-    # Get ticker data and create index
-    data = get_data(tickers, start_date, end_date)
+    data, company_names = get_data(tickers, start_date, end_date)
     index = create_index(data)
 
     comparison_data = get_data(comparison_tickers, start_date, end_date)
-    
-    # Generate image
+    ticker_name = company_names.get(ticker, ticker) 
     plt.style.use('dark_background')
     fig, ax = plt.subplots(figsize=(10, 6))
     fig.patch.set_facecolor('#09090B')
@@ -68,16 +75,14 @@ def generate_index_and_image(data):
     contributions = last_prices / total * 100 
     contributions_sorted = contributions.sort_values(ascending=False)
     legend_text = "\n".join([f"{ticker}: {contributions_sorted[ticker]:.2f}%" for ticker in contributions_sorted.index])
-    # ax.text(1.02, 0.5, legend_text, transform=ax.transAxes, fontsize=10, verticalalignment='center', color='white')
     ax.legend([index_name] + [index_names[key] for key in comparison_tickers], loc='upper left')
 
     # Save the figure to a BytesIO object
     image_stream = io.BytesIO()
     plt.savefig(image_stream, format='png', bbox_inches='tight')
     plt.close(fig)
-    image_stream.seek(0)  # rewind the file pointer to the beginning of the BytesIO object
+    image_stream.seek(0) 
     
-    # Convert the image to a base64 string
     image_base64 = base64.b64encode(image_stream.read()).decode('utf-8')
     
     return {
