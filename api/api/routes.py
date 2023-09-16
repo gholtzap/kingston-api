@@ -1,70 +1,52 @@
-print("Starting imports for routes.py...")
 from flask import Blueprint, request, send_file, jsonify
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
-
-print("Finished Flask and Werkzeug imports...")
 from pymongo import MongoClient
 
-print("Finished pymongo import...")
 
-print("Starting import: .alpha.alpha")
+print("Starting alpha imports ...")
 from .alpha.alpha import calculate_decisions
-print("Finished import: .alpha.alpha")
 
-print("Starting import: .beta.beta")
-from .beta.beta import generate_index_and_image
-print("Finished import: .beta.beta")
-
-print("Starting import: .theta.register")
-
+print("Starting theta imports ...")
+from .theta.login import login
+from .theta.update_profile import update_user_profile
 from .theta.register import register
 
-print("Starting import: .theta.login")
-
-from .theta.login import login
-
-print("Starting import: save_user_index")
+print("Starting beta imports ...")
 from .beta.save_index import save_user_index as core_save_index
-
-print("Starting import: fetch_saved_indexes")
 from .beta.save_index import fetch_saved_indexes
+from .beta.beta import generate_index_and_image
 
-print("Starting import: update_user_profile")
-from .theta.update_profile import update_user_profile
-
-print("Starting import: .clients.portfolio")
+print("Starting clients imports ...")
 from .clients.portfolio import add_user_portfolio, fetch_user_portfolio, initialize_portfolio,add_stock_buy
+from .clients.portfolio_display import get_portfolio_by_username
+from .clients.calculate_earnings import calculate_total_earnings
+
 print("Finished local module imports...")
 
 import json
 import pandas as pd
 
-print("Finished json and pandas imports...")
-
 import yfinance as yf
-print("Finished yfinance import...")
 
 import os
 import seaborn as sns
-print("Finished os and seaborn imports...")
 
 import matplotlib.dates as mdates
 import matplotlib
 matplotlib.use('Agg')
-print("Finished matplotlib imports...")
+
+
+# Blueprints 
 
 auth_bp = Blueprint('auth_bp', __name__)
-
-@auth_bp.route('/signup', methods=['POST'])
-def backend_signup():
-    return register()
-
-@auth_bp.route('/login', methods = ['POST'])
-def backend_login():
-    return login()
-
 tickers_bp = Blueprint('tickers_bp', __name__)
+
+
+################################################################ 
+######################### TICKERS BP ###########################
+################################################################ 
+
 
 @tickers_bp.route('/alpha', methods=['POST'])
 def tickers():
@@ -105,7 +87,6 @@ def save_index():
         return {'error': str(e)}, 500
 
 
-
 @tickers_bp.route('/getSavedIndexes', methods=["GET"])
 def get_saved_indexes_endpoint():
     username = request.args.get("username")
@@ -119,6 +100,17 @@ def get_saved_indexes_endpoint():
         return {'error': str(e)}, 500
 
 
+################################################################ 
+####################### AUTHENTICATION #########################
+################################################################ 
+
+@auth_bp.route('/signup', methods=['POST'])
+def backend_signup():
+    return register()
+
+@auth_bp.route('/login', methods = ['POST'])
+def backend_login():
+    return login()
 
 @auth_bp.route('/updateProfile', methods=['POST'])
 def update_profile():
@@ -139,54 +131,28 @@ def update_profile():
     except Exception as e:
         return {'error': str(e)}, 500
 
+################################################################ 
+###################### CLIENT PORTFOLIO ########################
+################################################################ 
 
-@auth_bp.route('/addPortfolio', methods=['POST'])
-def add_portfolio():
-    data = request.json
-    username = data.get('username')
-    portfolio = data.get('portfolio')
+portfolio_bp = Blueprint('portfolio_bp', __name__)
 
-    if not username or not portfolio:
-        return {'error': 'Required fields missing'}, 400
-
-    return add_user_portfolio(username, portfolio)
-
-@auth_bp.route('/getPortfolio/<string:username>', methods=['GET'])
+@portfolio_bp.route('/portfolio/<string:username>', methods=['GET'])
 def get_portfolio(username):
-    return jsonify(fetch_user_portfolio(username))
+    portfolio = get_portfolio_by_username(username)
+    
+    if portfolio:
+        return jsonify(portfolio)
+    else:
+        return jsonify({"error": "Portfolio not found for the given username"}), 404
 
-@auth_bp.route('/initializePortfolio', methods=['POST'])
-def initialize_client_portfolio():
-    print(request.json)
-    data = request.json
-    if not data:
-        return {'error': 'No data received'}, 400
-    elif "username" not in data:
-        return {'error': 'Username missing'}, 400
-    elif "buys" not in data:
-        return {'error': 'Buys missing'}, 400
-    for buy in data.get("buys", []):
-        if not all(key in buy for key in ["ticker", "shares", "date"]):
-            return {'error': 'Some buy entries are missing required fields'}, 400
+@portfolio_bp.route('/earnings/<string:username>', methods=['GET'])
+def get_earnings(username):
+    portfolio = get_portfolio_by_username(username)
+    
+    if not portfolio:
+        return jsonify({"error": "Portfolio not found for the given username"}), 404
 
-    username = data.get('username')
-    holdings = data.get('buys')
-
-    if not username or not holdings:
-        return {'error': 'Required fields missing'}, 400
-
-    return initialize_portfolio(username, holdings)
-
-
-@auth_bp.route('/addStockBuy', methods=['POST'])
-def add_stock_buy_route():
-    data = request.json
-    username = data.get('username')
-    ticker = data.get('ticker')
-    shares = data.get('shares')
-    date = data.get('date')
-
-    if not username or not ticker or shares is None or not date:  
-        return {'error': 'Required fields missing'}, 400
-
-    return add_stock_buy(username, ticker, shares, date)
+    earnings_data = calculate_total_earnings(portfolio)
+    
+    return jsonify(earnings_data)

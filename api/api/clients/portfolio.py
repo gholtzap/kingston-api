@@ -8,7 +8,6 @@ load_dotenv()
 # Get MongoDB URI
 MONGODB_URI = os.getenv('MONGODB_URI')
 
-
 def get_collections():
     # Setup MongoDB connection when needed
     client = MongoClient(MONGODB_URI)

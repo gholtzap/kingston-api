@@ -12,27 +12,31 @@ import yfinance
 
 def get_data(tickers, start_date, end_date):
     data = {}
-    company_names = {} 
+    company_names = {}
 
     for ticker in tickers:
-        yf_ticker = yfinance.Ticker(ticker)
-        ticker_data = yf_ticker.history(start=start_date, end=end_date)
-        data[ticker] = ticker_data["Adj Close"]
+        try:
+            yf_ticker = yfinance.Ticker(ticker)
+            ticker_data = yf_ticker.history(start=start_date, end=end_date)
 
-        company_info = yf_ticker.info
-        company_names[ticker] = company_info.get('longName', ticker) 
+            # Check if 'Adj Close' is present; if not, use 'Close'
+            column_to_use = "Adj Close" if "Adj Close" in ticker_data.columns else "Close"
 
+            data[ticker] = ticker_data[column_to_use]
+            company_info = yf_ticker.info
+            company_names[ticker] = company_info.get('longName', ticker)
+
+        except Exception as e:
+            # If there's an error while processing a ticker, print the ticker and the error message.
+            print(f"Error processing ticker {ticker}: {str(e)}")
+            continue
     return pd.DataFrame(data), company_names
-
 
 
 def create_index(df):
     return df.sum(axis=1)
 
-
-def generate_index_and_image(data):
-    
-    
+def generate_index_and_image(data):  
     index_color = "#40E0D0" 
     comparison_ticker_colors = {
         "^GSPC": "#FFFFBA", 
@@ -53,7 +57,7 @@ def generate_index_and_image(data):
     index = create_index(data)
 
     comparison_data = get_data(comparison_tickers, start_date, end_date)
-    ticker_name = company_names.get(ticker, ticker) 
+    #ticker_name = company_names.get(ticker, ticker) 
     plt.style.use('dark_background')
     fig, ax = plt.subplots(figsize=(10, 6))
     fig.patch.set_facecolor('#09090B')
@@ -62,7 +66,7 @@ def generate_index_and_image(data):
     ax.fill_between(index.index, index, color=index_color, alpha=0.1)
     for ticker in comparison_tickers:
         color = comparison_ticker_colors.get(ticker, "white") 
-        ax.plot(comparison_data[ticker] * (index[0] / comparison_data[ticker][0]), label=ticker, color=color, linewidth=1.0)
+        ax.plot(comparison_data[0][ticker] * (index[0] / comparison_data[0][ticker][0]), label=ticker, color=color, linewidth=1.0)
     min_close = index.min()
     max_close = index.max()
     padding = (max_close - min_close) * 0.1
