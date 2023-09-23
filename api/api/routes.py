@@ -9,7 +9,7 @@ from .alpha.alpha import calculate_decisions
 
 print("Starting theta imports ...")
 from .theta.login import login
-from .theta.update_profile import update_user_profile
+from .theta.update_profile import update_user_profile, modify_role
 from .theta.register import register
 
 print("Starting beta imports ...")
@@ -130,6 +130,20 @@ def update_profile():
         return result
     except Exception as e:
         return {'error': str(e)}, 500
+
+@auth_bp.route('/modify-role', methods=['POST'])
+def modify_user_role():
+    # Extract the data from the frontend request
+    data = request.json
+    current_username = data.get('current_username')
+    target_username = data.get('target_username')
+    new_role = data.get('new_role')
+
+    # Use the logic function to handle the modification
+    result, status = modify_role(current_username, target_username, new_role)
+
+    return jsonify(result), status
+
 
 ################################################################ 
 ###################### CLIENT PORTFOLIO ########################

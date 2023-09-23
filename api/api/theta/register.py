@@ -29,6 +29,7 @@ def register():
         username = data.get('username')
         email = data.get('email')
         password = data.get('password')
+        role = data.get('role')
         
         if not all([username, email, password]):
             return jsonify({'error': 'Missing data'}), 400
@@ -46,7 +47,8 @@ def register():
         new_user = {
             "username": username,
             "email": email,
-            "password": hashed_password
+            "password": hashed_password,
+            "role": role
         }
 
         collection.insert_one(new_user)
