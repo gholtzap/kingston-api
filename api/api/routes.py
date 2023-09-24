@@ -1,3 +1,4 @@
+from http.client import BAD_REQUEST
 from flask import Blueprint, request, send_file, jsonify
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
@@ -22,6 +23,8 @@ from .clients.portfolio import edit_buy_in_portfolio, delete_buy_from_portfolio,
 from .clients.portfolio_display import get_portfolio_by_username
 from .clients.calculate_earnings import calculate_total_earnings
 
+print("Starting profile imports ... ")
+from .clients.profile import update_profile_picture, fetch_user_data
 print("Finished local module imports...")
 
 import json
@@ -41,6 +44,7 @@ matplotlib.use('Agg')
 
 auth_bp = Blueprint('auth_bp', __name__)
 tickers_bp = Blueprint('tickers_bp', __name__)
+profile_bp = Blueprint('profile_bp', __name__)
 
 
 ################################################################ 
@@ -144,7 +148,42 @@ def modify_user_role():
 
     return jsonify(result), status
 
+################################################################ 
+####################### CLIENT PROFILE  ########################
+################################################################ 
 
+@profile_bp.route('/update_pfp', methods=['POST'])
+def update_profile_picture_route():
+    try:
+        print("Entering update_pfp route")  # Debug Print
+        data = request.get_json()
+        print(f"Received data: {data}")  # Debug Print
+
+        username = data.get('username')
+        base64_image = data.get('image')
+
+        if not username or not base64_image:
+            return jsonify({'error': 'Username and image are required'}), 400
+
+        print("Calling update_profile_picture function")  # Debug Print
+        result, status_code = update_profile_picture(username, base64_image)
+        print(f"Result from update_profile_picture: {result}")  # Debug Print
+
+        return jsonify(result), status_code
+    except Exception as e:
+        print(f"Unexpected error in update_profile_picture_route: {e}")  # Ensure this gets printed
+        return jsonify({"error": "Internal server error"}), 500
+
+
+
+@profile_bp.route('/user/<string:username>', methods=['GET'])
+def get_user_data(username):
+    user_data = fetch_user_data(username)
+    
+    if 'error' in user_data:
+        return jsonify(user_data), 404
+    else:
+        return jsonify(user_data)
 ################################################################ 
 ###################### CLIENT PORTFOLIO ########################
 ################################################################ 

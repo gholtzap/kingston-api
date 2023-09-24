@@ -8,6 +8,7 @@ def create_app():
     
     app = Flask(__name__)
     CORS(app) 
+
     app.json_encoder = CustomJSONEncoder
 
     print("Registering tickers_bp...")
@@ -21,6 +22,10 @@ def create_app():
     print("Registering portfolio_bp...") 
     from .routes import portfolio_bp
     app.register_blueprint(portfolio_bp)
+    
+    print("Registering profile bp...") 
+    from .routes import profile_bp
+    app.register_blueprint(profile_bp)
 
     return app
 
