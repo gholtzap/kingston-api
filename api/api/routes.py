@@ -22,6 +22,7 @@ print("Starting clients imports ...")
 from .clients.portfolio import edit_buy_in_portfolio, delete_buy_from_portfolio, add_stock_to_portfolio, initialize_portfolio
 from .clients.portfolio_display import get_portfolio_by_username
 from .clients.calculate_earnings import calculate_total_earnings
+from .clients.calculate_earnings import calculate_portfolio_value_for_user
 
 print("Starting profile imports ... ")
 from .clients.profile import update_profile_picture, fetch_user_data
@@ -190,7 +191,10 @@ def get_user_data(username):
 
 portfolio_bp = Blueprint('portfolio_bp', __name__)
 
-
+@portfolio_bp.route('/portfolio_value/<username>', methods=['GET'])
+def get_portfolio_value(username):
+    value = calculate_portfolio_value_for_user(username)
+    return jsonify({'portfolio_value': value})
 
 # Create
 @portfolio_bp.route('/portfolio/initialize', methods=['POST'])

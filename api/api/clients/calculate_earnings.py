@@ -1,10 +1,65 @@
+from pymongo import MongoClient
 import yfinance as yf
 from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+MONGODB_URI = os.getenv('MONGODB_URI')
+
+def get_collections():
+    client = MongoClient(MONGODB_URI)
+    db = client['theta']
+    
+    accounts_collection = db['accounts']
+    portfolios_collection = db['clients-portfolio']
+    
+    return accounts_collection, portfolios_collection
 
 def fetch_stock_data(ticker, start_date, end_date=None):
     stock = yf.Ticker(ticker)
     data = stock.history(start=start_date, end=end_date)
     return data['Close']
+
+def fetch_current_stock_price(ticker):
+    stock = yf.Ticker(ticker)
+    data = stock.history(period="1d") 
+
+    if data.empty:
+        print(f"No data available for {ticker}.")
+        return 0
+    return data['Close'].iloc[0]
+
+def calculate_portfolio_value_for_user(username):
+    accounts_collection, portfolios_collection = get_collections()
+    user_portfolio = portfolios_collection.find_one({"username": username})
+
+    # Debugging
+    print(f"Fetched portfolio for user {username}:")
+    print(user_portfolio)
+    if not user_portfolio:
+        return 0
+    
+    total_value = 0
+
+    for holding in user_portfolio.get('holdings', []):
+        ticker = holding['ticker']
+        shares = holding['shares']
+
+        # Get current price for the ticker
+        current_price = fetch_current_stock_price(ticker)
+        
+        print(f"Current price for {ticker} is {current_price}. Number of shares is {shares}.")
+
+
+        # Add the value of this holding to the total value
+        total_value += current_price * shares
+
+    print(f"Total calculated portfolio value for user {username} is {total_value}.")
+    return total_value
+
+
 
 def calculate_earnings_for_stock(ticker, shares, start_date):
     data = fetch_stock_data(ticker, start_date)
@@ -52,7 +107,7 @@ def calculate_total_earnings(portfolio):
     for holding in portfolio['holdings']:
         earnings, percent_return = calculate_earnings_for_stock(holding['ticker'], holding['shares'], holding['date'])
         total_earnings += earnings
-        total_percent_return += percent_return  # This will average out later
+        total_percent_return += percent_return 
 
         w_earnings, w_return = calculate_earnings_for_interval(holding['ticker'], holding['shares'], one_week_ago, today)
         weekly_earnings += w_earnings
