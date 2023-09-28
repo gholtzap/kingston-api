@@ -5,18 +5,15 @@ from dotenv import load_dotenv
 import os
 import re
 
-# Loading environment variables only once
 print("Loading .env...")
 load_dotenv()
 mongodb_uri = os.getenv('MONGODB_URI')
-
-# Removed unnecessary Flask app instantiation as you're not defining routes in this module
+DEFAULT_PFP = os.getenv('DEFAULT_PFP')
 
 def is_valid_email(email):
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
 
 def get_mongo_collection():
-    # This function ensures that MongoDB connection is established only when needed.
     client = MongoClient(mongodb_uri)
     db = client['theta']
     return db['accounts']
@@ -48,7 +45,8 @@ def register():
             "username": username,
             "email": email,
             "password": hashed_password,
-            "role": role
+            "role": role,
+            "pfp": DEFAULT_PFP
         }
 
         collection.insert_one(new_user)
