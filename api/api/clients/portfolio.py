@@ -31,7 +31,7 @@ def add_user_portfolio(username, portfolio):
     portfolios_collection.update_one(
         {"username": username},
         {"$set": {"portfolio": portfolio}},
-        upsert=True  # If not exists, insert; otherwise, update
+        upsert=True
     )
     return {'status': 'Portfolio updated successfully'}, 200
 
@@ -67,7 +67,7 @@ def initialize_portfolio(username, buys):
                 "holdings": buys
             }
         },
-        upsert=True  # If the user doesn't have a portfolio, create one
+        upsert=True
     )
 
     return {'status': 'Portfolio initialized successfully'}, 200
@@ -105,28 +105,37 @@ def add_stock_buy(username, ticker, shares, date):
             "$push": {"holdings": new_stock_buy},
             "$set": {"last_buy_id": new_id}
         },
-        upsert=True  # If user doesn't have a portfolio, create one
+        upsert=True
     )
 
     return {'status': 'Stock buy added successfully'}, 200
 
 
-def add_stock_to_portfolio(username: str, ticker: str, quantity: int, date: str) -> dict:
+def add_stock_to_portfolio(username: str, ticker: str, quantity: int, price: any) -> dict:
     _, portfolios_collection = get_collections()
+    
     # Check if user exists
     user_portfolio = portfolios_collection.find_one({"username": username})
     if not user_portfolio:
         return {"error": "User not found"}, 404
 
-    # Add the new stock to the holdings
+    # Get the last buy ID and increment it for the new stock buy
+    last_buy_id = user_portfolio.get("last_buy_id", 0)
+    new_buy_id = last_buy_id + 1
+
+    # Add the new stock to the holdings with the new ID
     new_holding = {
-        "ticker": ticker,
-        "shares": quantity,
-        "date": date
+        "stock": ticker,
+        "quantity": quantity,
+        "price": price,
+        "id": new_buy_id
     }
     portfolios_collection.update_one(
         {"username": username},
-        {"$push": {"holdings": new_holding}}
+        {
+            "$push": {"holdings": new_holding},
+            "$set": {"last_buy_id": new_buy_id} 
+        }
     )
 
     return {"status": "Stock added successfully"}, 200
@@ -143,7 +152,7 @@ def delete_buy_from_portfolio(username, buy_id):
     # Remove buy with the given ID from the holdings
     result = portfolios_collection.update_one(
         {"username": username},
-        {"$pull": {"holdings": {"id": buy_id}}}  # $pull will remove the matching subdocument from the holdings array
+        {"$pull": {"holdings": {"id": buy_id}}}
     )
 
     # Check if the operation was successful
@@ -151,6 +160,27 @@ def delete_buy_from_portfolio(username, buy_id):
         return {'error': 'No buy found with the provided ID or other error occurred'}, 404
 
     return {'status': 'Buy removed successfully'}, 200
+
+def delete_buys_from_portfolio(username, buy_ids):
+    _, portfolios_collection = get_collections()
+
+    # Ensure the user exists
+    user_portfolio = portfolios_collection.find_one({"username": username})
+    if not user_portfolio:
+        return {'error': 'Portfolio not found for this user'}, 404
+
+    # Use the $in operator with $pull to remove all matching buy IDs
+    result = portfolios_collection.update_one(
+        {"username": username},
+        {"$pull": {"holdings": {"id": {"$in": buy_ids}}}}
+    )
+
+    # Check if the operation was successful
+    if result.modified_count == 0:
+        return {'error': 'No buys found with the provided IDs or other error occurred'}, 404
+
+    return {'status': f"{result.modified_count} buys removed successfully"}, 200
+
 
 def edit_buy_in_portfolio(username, buy_id, ticker=None, shares=None, date=None):
     _, portfolios_collection = get_collections()
