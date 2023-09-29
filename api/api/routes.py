@@ -6,8 +6,7 @@ import yfinance as yf
 import pandas as pd
 import json
 from .clients.profile import update_profile_picture, fetch_user_data
-from .clients.calculate_earnings import calculate_portfolio_value_for_user
-from .clients.calculate_earnings import calculate_total_earnings
+from .clients.calculate_earnings import calculate_total_earnings, calculate_portfolio_value_for_user, fetch_current_stock_price
 from .clients.portfolio_display import get_portfolio_by_username
 from .clients.portfolio import delete_buys_from_portfolio, edit_buy_in_portfolio, delete_buy_from_portfolio, add_stock_to_portfolio, initialize_portfolio
 from .beta.beta import generate_index_and_image
@@ -190,6 +189,7 @@ def get_user_data(username):
         return jsonify(user_data), 404
     else:
         return jsonify(user_data)
+    
 ################################################################
 ###################### CLIENT PORTFOLIO ########################
 ################################################################
@@ -202,6 +202,17 @@ portfolio_bp = Blueprint('portfolio_bp', __name__)
 def get_portfolio_value(username):
     value = calculate_portfolio_value_for_user(username)
     return jsonify({'portfolio_value': value})
+
+
+@portfolio_bp.route('/market-data', methods=['GET'])
+def get_market_data():
+    sp500_price = fetch_current_stock_price("^GSPC")
+    dow_jones_price = fetch_current_stock_price("^DJI")
+
+    return jsonify({
+        'sp500': sp500_price,
+        'dow_jones': dow_jones_price
+    })
 
 # Create
 
@@ -267,13 +278,14 @@ def edit_buy():
     data = request.get_json()
     username = data.get('username')
     buy_id = data.get('buy_id')
-    ticker = data.get('ticker')
-    shares = data.get('shares')
+    ticker = data.get('stock') 
+    shares = data.get('quantity') 
+    price = data.get('price')
 
     if not username or not buy_id:
         return jsonify({'error': 'Username or buy ID missing'}), 400
 
-    response, status = edit_buy_in_portfolio(username, buy_id, ticker, shares)
+    response, status = edit_buy_in_portfolio(username, buy_id, ticker, shares, price)
     return jsonify(response), status
 
 

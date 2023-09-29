@@ -43,9 +43,15 @@ def calculate_portfolio_value_for_user(username):
     
     total_value = 0
 
+    
     for holding in user_portfolio.get('holdings', []):
-        ticker = holding['ticker']
-        shares = holding['shares']
+        try:
+            ticker = holding['stock']
+        except KeyError:
+            print(f"KeyError: 'stock' key not found for holding: {holding}")
+            continue
+        ticker = holding['stock']
+        shares = holding['quantity']
 
         # Get current price for the ticker
         current_price = fetch_current_stock_price(ticker)
@@ -53,6 +59,8 @@ def calculate_portfolio_value_for_user(username):
         print(f"Current price for {ticker} is {current_price}. Number of shares is {shares}.")
 
 
+        current_price = float(current_price)
+        shares = int(shares)
         # Add the value of this holding to the total value
         total_value += current_price * shares
 
@@ -137,3 +145,5 @@ def calculate_total_earnings(portfolio):
         'yearly_earnings': yearly_earnings,
         'yearly_return': yearly_return
     }
+    
+    

@@ -182,7 +182,9 @@ def delete_buys_from_portfolio(username, buy_ids):
     return {'status': f"{result.modified_count} buys removed successfully"}, 200
 
 
-def edit_buy_in_portfolio(username, buy_id, ticker=None, shares=None, date=None):
+def edit_buy_in_portfolio(username, buy_id, ticker=None, shares=None, price=None):
+    print("Function Args:", username, buy_id, ticker, shares, price) 
+    
     _, portfolios_collection = get_collections()
 
     # Ensure the user exists
@@ -196,8 +198,10 @@ def edit_buy_in_portfolio(username, buy_id, ticker=None, shares=None, date=None)
         update_fields["holdings.$.ticker"] = ticker
     if shares is not None:  # Checking for None because shares can be 0
         update_fields["holdings.$.shares"] = shares
-    if date:
-        update_fields["holdings.$.date"] = date
+    if price:
+        update_fields["holdings.$.price"] = price
+
+    print("UPDATE FIELDS :", update_fields)  # For debugging
 
     # Update the buy with given ID in the holdings
     result = portfolios_collection.update_one(
